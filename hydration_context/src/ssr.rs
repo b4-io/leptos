@@ -143,35 +143,43 @@ impl SharedContext for SsrSharedContext {
 
         // 1) initial, synchronous setup chunk
         let mut initial_chunk = String::new();
-        // resolved synchronous resources and errors
-        initial_chunk.push_str("__RESOLVED_RESOURCES=[");
-        for resolved in sync_data {
-            resolved.write_to_buf(&mut initial_chunk);
-            initial_chunk.push(',');
-        }
-        initial_chunk.push_str("];");
 
-        initial_chunk.push_str("__SERIALIZED_ERRORS=[");
-        for error in mem::take(&mut *self.errors.write().or_poisoned()) {
-            _ = write!(
-                initial_chunk,
-                "[{}, {}, {:?}],",
-                error.0 .0,
-                error.1,
-                error.2.to_string()
-            );
+        if !sync_data.is_empty() {
+            // resolved synchronous resources and errors
+            initial_chunk.push_str("__RESOLVED_RESOURCES=[");
+            for resolved in sync_data {
+                resolved.write_to_buf(&mut initial_chunk);
+                initial_chunk.push(',');
+            }
+            initial_chunk.push_str("];");
+        };
+
+        let errors = mem::take(&mut *self.errors.write().or_poisoned());
+        if !errors.is_empty() {
+            initial_chunk.push_str("__SERIALIZED_ERRORS=[");
+            for error in errors {
+                _ = write!(
+                    initial_chunk,
+                    "[{}, {}, {:?}],",
+                    error.0 .0,
+                    error.1,
+                    error.2.to_string()
+                );
+            }
+            initial_chunk.push_str("];");
         }
-        initial_chunk.push_str("];");
 
         // pending async resources
-        initial_chunk.push_str("__PENDING_RESOURCES=[");
-        for (id, _) in async_data.iter() {
-            _ = write!(&mut initial_chunk, "{},", id.0);
+        if !async_data.is_empty() {
+            initial_chunk.push_str("__PENDING_RESOURCES=[");
+            for (id, _) in async_data.iter() {
+                _ = write!(&mut initial_chunk, "{},", id.0);
+            }
+            initial_chunk.push_str("];")
         }
-        initial_chunk.push_str("];");
 
         // resolvers
-        initial_chunk.push_str("__RESOURCE_RESOLVERS=[];");
+        // initial_chunk.push_str("__RESOURCE_RESOLVERS=[];");
 
         let async_data = AsyncDataStream {
             async_buf: Arc::clone(&self.async_buf),

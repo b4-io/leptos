@@ -109,6 +109,9 @@ where
                     move || {
                         Box::pin(shared_context.pending_data().unwrap().map(
                             move |chunk| {
+                                if chunk.is_empty() {
+                                    return chunk;
+                                }
                                 format!("<script{nonce}>{chunk}</script>")
                             },
                         ))
