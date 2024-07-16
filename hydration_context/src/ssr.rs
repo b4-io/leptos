@@ -189,12 +189,17 @@ impl SharedContext for SsrSharedContext {
 
         let incomplete = Arc::clone(&self.incomplete);
 
-        let stream = stream::once(async move { initial_chunk })
-            .chain(async_data)
+        let stream = async_data
+            .chain(stream::once(async move { initial_chunk }))
             .chain(once(async move {
                 let mut script = String::new();
+                let chunks = mem::take(&mut *incomplete.lock().or_poisoned());
+                if !chunks.is_empty() {
+                    return script
+                }
+
                 script.push_str("__INCOMPLETE_CHUNKS=[");
-                for chunk in mem::take(&mut *incomplete.lock().or_poisoned()) {
+                for chunk in chunks {
                     _ = write!(script, "{},", chunk.0);
                 }
                 script.push_str("];");
