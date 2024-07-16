@@ -194,7 +194,7 @@ impl SharedContext for SsrSharedContext {
             .chain(once(async move {
                 let mut script = String::new();
                 let chunks = mem::take(&mut *incomplete.lock().or_poisoned());
-                if !chunks.is_empty() {
+                if chunks.is_empty() {
                     return script
                 }
 
